@@ -50,21 +50,25 @@ parallel (
             }
         }
     },
-    "iOS (Xcode 11)": {
+    "iOS (Xcode 11.3)": {
         throttle(['provisions-ios-toolchain']) {
-            node ("xcode11") {
-                archive ("ios", "release", "Darwin", "", "", "", "xcode11")
+            node ("xcode113") {
+                archive ("ios", "release", "Darwin", "", "", "", "xcode113")
             }
         }
     },
-    "Mac (Xcode 11)": {
+    "Mac (Xcode 11.3)": {
         throttle(['provisions-mac-toolchain']) {
-            node ("xcode11") {
-                archive ("mac", "release", "Darwin", "", "", "", "xcode11")
+            node ("xcode113") {
+                archive ("mac", "release", "Darwin", "", "", "", "xcode113")
             }
         }
     },
     "WASM Linux": {
+        if (monoBranch != 'master') {
+            echo "Skipping WASM build on non-master branch."
+            return
+        }
         throttle(['provisions-wasm-toolchain']) {
             node ("ubuntu-1804-amd64") {
                 archive ("wasm", "release", "Linux", "ubuntu-1804-amd64-preview", "npm dotnet-sdk-2.1 nuget openjdk-8-jre python3-pip")
@@ -113,8 +117,11 @@ def archive (product, configuration, platform, chrootname = "", chrootadditional
                     // build the Archive
                     timeout (time: 300, unit: 'MINUTES') {
                         if (platform == "Darwin") {
-                            def brewpackages = "autoconf automake ccache cmake coreutils gdk-pixbuf gettext glib gnu-sed gnu-tar intltool ios-deploy jpeg libffi libidn2 libpng libtiff libtool libunistring ninja openssl p7zip pcre pkg-config scons wget xz mingw-w64 make xamarin/xamarin-android-windeps/mingw-zlib"
-                            sh "brew tap xamarin/xamarin-android-windeps"
+                            def brewpackages = "autoconf automake ccache cmake coreutils gdk-pixbuf gettext glib gnu-sed gnu-tar intltool ios-deploy jpeg libffi libidn2 libpng libtiff libtool libunistring ninja openssl p7zip pcre pkg-config scons wget xz mingw-w64 make"
+                            if (product == "android") {
+                                brewpackages = "${brewpackages} xamarin/xamarin-android-windeps/mingw-zlib"
+                                sh "brew tap xamarin/xamarin-android-windeps"
+                            }
                             sh "brew install ${brewpackages} || brew upgrade ${brewpackages}"
                             sh "CI_TAGS=sdks-${product},no-tests,${configuration},${xcodeVersion} scripts/ci/run-jenkins.sh"
                         } else if (platform == "Linux") {
